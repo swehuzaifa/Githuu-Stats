@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/github_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/contribution_day.dart';
 import '../utils/hex_color.dart';
 
@@ -13,16 +14,14 @@ class GitHubDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final githubData = ref.watch(githubProvider);
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF374151), size: 20),
+          icon: Icon(Icons.arrow_back_ios_rounded,
+              color: colors.textSecondary, size: 20),
           onPressed: () => context.go('/profile'),
         ),
         title: Text(
@@ -30,37 +29,60 @@ class GitHubDashboard extends ConsumerWidget {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF1A1A2E),
+            color: colors.textPrimary,
           ),
         ),
         centerTitle: true,
+        actions: [
+          // Theme toggle in app bar
+          IconButton(
+            onPressed: () =>
+                ref.read(themeModeProvider.notifier).toggle(),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, anim) =>
+                  RotationTransition(turns: anim, child: child),
+              child: Icon(
+                isDark
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+                key: ValueKey(isDark),
+                size: 22,
+                color: isDark
+                    ? const Color(0xFFFBBF24)
+                    : colors.textTertiary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
             height: 1,
-            color: const Color(0xFFF3F4F6),
+            color: Theme.of(context).dividerColor,
           ),
         ),
       ),
       body: githubData.when(
-        loading: () => _buildLoading(),
-        error: (error, stack) => _buildError(context, ref, error),
-        data: (profile) => _buildDashboard(context, profile),
+        loading: () => _buildLoading(colors),
+        error: (error, stack) => _buildError(context, ref, error, colors),
+        data: (profile) => _buildDashboard(context, profile, colors, isDark),
       ),
     );
   }
 
-  Widget _buildLoading() {
+  Widget _buildLoading(AppColors colors) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 44,
             height: 44,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2D9CDB)),
+              valueColor: AlwaysStoppedAnimation<Color>(colors.accent),
             ),
           ),
           const SizedBox(height: 20),
@@ -68,7 +90,7 @@ class GitHubDashboard extends ConsumerWidget {
             'Fetching your contributions...',
             style: GoogleFonts.poppins(
               fontSize: 15,
-              color: const Color(0xFF9CA3AF),
+              color: colors.textMuted,
             ),
           ),
         ],
@@ -76,7 +98,8 @@ class GitHubDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildError(BuildContext context, WidgetRef ref, Object error) {
+  Widget _buildError(
+      BuildContext context, WidgetRef ref, Object error, AppColors colors) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -87,7 +110,7 @@ class GitHubDashboard extends ConsumerWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
+                color: colors.errorBackground,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
@@ -102,7 +125,7 @@ class GitHubDashboard extends ConsumerWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF374151),
+                color: colors.textSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -111,7 +134,7 @@ class GitHubDashboard extends ConsumerWidget {
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                color: const Color(0xFF9CA3AF),
+                color: colors.textMuted,
                 height: 1.5,
               ),
             ),
@@ -124,11 +147,11 @@ class GitHubDashboard extends ConsumerWidget {
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A1A2E),
+                backgroundColor: colors.buttonPrimary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -140,8 +163,8 @@ class GitHubDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildDashboard(BuildContext context, GitHubProfile profile) {
-    // Organize days into weeks (columns) with 7 days each
+  Widget _buildDashboard(BuildContext context, GitHubProfile profile,
+      AppColors colors, bool isDark) {
     final List<List<ContributionDay>> weeks = [];
     for (int i = 0; i < profile.days.length; i += 7) {
       final end =
@@ -162,7 +185,8 @@ class GitHubDashboard extends ConsumerWidget {
                   'Total',
                   profile.totalContributions.toString(),
                   Icons.grid_view_rounded,
-                  const Color(0xFF2D9CDB),
+                  colors.accent,
+                  colors,
                 ),
               ),
               const SizedBox(width: 12),
@@ -172,6 +196,7 @@ class GitHubDashboard extends ConsumerWidget {
                   _getThisWeekCount(profile.days).toString(),
                   Icons.calendar_today_rounded,
                   const Color(0xFF30A14E),
+                  colors,
                 ),
               ),
               const SizedBox(width: 12),
@@ -181,6 +206,7 @@ class GitHubDashboard extends ConsumerWidget {
                   _getBestDay(profile.days).toString(),
                   Icons.emoji_events_rounded,
                   const Color(0xFFF59E0B),
+                  colors,
                 ),
               ),
             ],
@@ -196,11 +222,11 @@ class GitHubDashboard extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.cardBackground,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: colors.shadowColor,
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -216,7 +242,7 @@ class GitHubDashboard extends ConsumerWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1A1A2E),
+                        color: colors.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -224,7 +250,7 @@ class GitHubDashboard extends ConsumerWidget {
                       '${profile.totalContributions} contributions',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
-                        color: const Color(0xFF9CA3AF),
+                        color: colors.textMuted,
                       ),
                     ),
                   ],
@@ -232,7 +258,7 @@ class GitHubDashboard extends ConsumerWidget {
 
                 const SizedBox(height: 6),
 
-                // Day labels
+                // Day labels + heatmap grid
                 Row(
                   children: [
                     SizedBox(
@@ -249,7 +275,7 @@ class GitHubDashboard extends ConsumerWidget {
                                 label,
                                 style: GoogleFonts.poppins(
                                   fontSize: 10,
-                                  color: const Color(0xFF9CA3AF),
+                                  color: colors.textMuted,
                                 ),
                               ),
                             ),
@@ -257,7 +283,6 @@ class GitHubDashboard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    // Heatmap grid
                     Expanded(
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -266,18 +291,24 @@ class GitHubDashboard extends ConsumerWidget {
                             for (int w = 0; w < weeks.length; w++)
                               Column(
                                 children: [
-                                  for (int d = 0; d < weeks[w].length; d++)
+                                  for (int d = 0;
+                                      d < weeks[w].length;
+                                      d++)
                                     Tooltip(
                                       message:
                                           '${weeks[w][d].date}: ${weeks[w][d].count} contributions',
                                       child: Container(
                                         width: 14,
                                         height: 14,
-                                        margin: const EdgeInsets.all(2),
+                                        margin:
+                                            const EdgeInsets.all(2),
                                         decoration: BoxDecoration(
-                                          color: hexToColor(weeks[w][d].color),
+                                          color: _getCellColor(
+                                              weeks[w][d].color,
+                                              isDark),
                                           borderRadius:
-                                              BorderRadius.circular(3),
+                                              BorderRadius.circular(
+                                                  3),
                                         ),
                                       ),
                                     ),
@@ -300,7 +331,7 @@ class GitHubDashboard extends ConsumerWidget {
                       'Less',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
-                        color: const Color(0xFF9CA3AF),
+                        color: colors.textMuted,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -314,9 +345,10 @@ class GitHubDashboard extends ConsumerWidget {
                       Container(
                         width: 14,
                         height: 14,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 2),
                         decoration: BoxDecoration(
-                          color: hexToColor(hex),
+                          color: _getCellColor(hex, isDark),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -325,7 +357,7 @@ class GitHubDashboard extends ConsumerWidget {
                       'More',
                       style: GoogleFonts.poppins(
                         fontSize: 10,
-                        color: const Color(0xFF9CA3AF),
+                        color: colors.textMuted,
                       ),
                     ),
                   ],
@@ -344,11 +376,11 @@ class GitHubDashboard extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.cardBackground,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: colors.shadowColor,
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -362,7 +394,7 @@ class GitHubDashboard extends ConsumerWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A1A2E),
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -374,7 +406,7 @@ class GitHubDashboard extends ConsumerWidget {
                             width: 10,
                             height: 10,
                             decoration: BoxDecoration(
-                              color: hexToColor(day.color),
+                              color: _getCellColor(day.color, isDark),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -384,7 +416,7 @@ class GitHubDashboard extends ConsumerWidget {
                               day.date,
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
-                                color: const Color(0xFF6B7280),
+                                color: colors.textTertiary,
                               ),
                             ),
                           ),
@@ -393,8 +425,8 @@ class GitHubDashboard extends ConsumerWidget {
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: day.count > 0
-                                  ? const Color(0xFFECFDF5)
-                                  : const Color(0xFFF3F4F6),
+                                  ? colors.positiveBackground
+                                  : colors.tagBackground,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -403,8 +435,8 @@ class GitHubDashboard extends ConsumerWidget {
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color: day.count > 0
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF9CA3AF),
+                                    ? colors.positiveText
+                                    : colors.textMuted,
                               ),
                             ),
                           ),
@@ -424,16 +456,16 @@ class GitHubDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(
-      String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon,
+      Color color, AppColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.shadowColor,
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -448,7 +480,7 @@ class GitHubDashboard extends ConsumerWidget {
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A1A2E),
+              color: colors.textPrimary,
             ),
           ),
           const SizedBox(height: 2),
@@ -456,12 +488,20 @@ class GitHubDashboard extends ConsumerWidget {
             label,
             style: GoogleFonts.poppins(
               fontSize: 11,
-              color: const Color(0xFF9CA3AF),
+              color: colors.textMuted,
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Adjusts heatmap cell colors for dark mode
+  Color _getCellColor(String hex, bool isDark) {
+    if (isDark && (hex == '#ebedf0' || hex == '#EBEDF0')) {
+      return const Color(0xFF2A2A2A);
+    }
+    return hexToColor(hex);
   }
 
   int _getThisWeekCount(List<ContributionDay> days) {
@@ -476,7 +516,8 @@ class GitHubDashboard extends ConsumerWidget {
     return days.map((d) => d.count).reduce((a, b) => a > b ? a : b);
   }
 
-  List<ContributionDay> _getRecentDays(List<ContributionDay> days, int count) {
+  List<ContributionDay> _getRecentDays(
+      List<ContributionDay> days, int count) {
     if (days.length <= count) return days.reversed.toList();
     return days.sublist(days.length - count).reversed.toList();
   }
