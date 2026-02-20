@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: github-stats-backend
+    runtime: node
+    rootDir: github-backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_USERNAME
+        value: swehuzaifa
