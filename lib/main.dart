@@ -13,7 +13,7 @@ class GitHubStatsApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'GitHub Stats',
+      title: 'Githu',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

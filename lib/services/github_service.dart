@@ -6,7 +6,7 @@ class GitHubService {
   // For Android emulator use: http://10.0.2.2:3000
   // For physical device / web: use your machine's local IP
   // For localhost testing: http://localhost:3000
-  static const String _baseUrl = 'http://192.168.1.7:3000';
+  static const String _baseUrl = 'https://githuu-stats.vercel.app';
 
   /// Fetches GitHub contribution data from the backend proxy.
   static Future<GitHubProfile> fetchContributions() async {
